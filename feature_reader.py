@@ -13,7 +13,8 @@ with open("../trec45-ranklib-top2k.txt.shuffled", "r") as f:
 
         values.append(int(segments[0]))
         
-        feature = list(map(lambda x: float(x.split(':')[1]), segments[2:2+36]))
+        # feature = list(map(lambda x: float(x.split(':')[1]), segments[2:2+36]))
+        feature = [ float(seg.split(':')[1]) for seg in segments[2:2+36] ]
         features.append(feature)
     
 features = np.array(features)
@@ -22,5 +23,7 @@ values = np.array(values)
 
 
 if __name__ == "__main__":
+    print(features.shape)
     print(features)
+    print(values.shape)
     print(values)
