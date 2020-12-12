@@ -1,0 +1,23 @@
+appdirs==1.4.4
+catboost==0.24.3
+certifi==2020.12.5
+cycler==0.10.0
+distlib @ file:///tmp/build/80754af9/distlib_1600715946941/work
+filelock==3.0.12
+graphviz==0.15
+importlib-metadata @ file:///tmp/build/80754af9/importlib-metadata_1602276842396/work
+importlib-resources @ file:///tmp/build/80754af9/importlib_resources_1603999960258/work
+kiwisolver==1.3.1
+matplotlib==3.3.3
+numpy==1.19.4
+pandas==1.1.5
+Pillow==8.0.1
+plotly==4.14.1
+pyparsing==2.4.7
+python-dateutil==2.8.1
+pytz==2020.4
+retrying==1.3.3
+scipy==1.5.4
+six @ file:///tmp/build/80754af9/six_1605205335545/work
+virtualenv @ file:///tmp/build/80754af9/virtualenv_1607370053470/work
+zipp @ file:///tmp/build/80754af9/zipp_1604001098328/work
