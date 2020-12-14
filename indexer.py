@@ -32,6 +32,7 @@ def regularizeText(text):
 #     index: OrderedDict
 #         "term" -> (docid:int, tf:int,)[]
 #     docInfo: int -> DocInfo[]
+#     docId: docno:str -> docid:int
 # Handler
 #     ii: InvertedIndex
 
@@ -50,6 +51,7 @@ class InvertedIndex():
         self.dictionary = set()
         self.bodyIndex = {}
         self.docInfo = [] 
+        self.docId = {} # docno -> docid
 
     def addToDictionary(self, text):
         terms = regularizeText(text)
@@ -66,7 +68,10 @@ class InvertedIndex():
             self.bodyIndex[term].append((docid, freq,)) # add to index
 
     def addDocInfo(self, info):
+        self.docId[info.docno] = len(self.docInfo)
         self.docInfo.append(info)
+        return len(self.docInfo)
+        
 
     # def finalizeBody(self):
     #     # remove stopwords
@@ -143,8 +148,7 @@ class IndexHandler(Handler):
             self.ii.addBody(self.currentContents, self.currentDocid)
         elif tag == 'DOC':
             # TODO: count doc length
-            self.ii.addDocInfo(DocInfo(0, self.currentDocno))
-            self.currentDocid += 1
+            self.currentDocid = self.ii.addDocInfo(DocInfo(0, self.currentDocno))
             self.logCounter.count()
 
 
@@ -159,16 +163,19 @@ if __name__ == "__main__":
 
     parser.setContentHandler( DictionaryHandler(ii) )    
     parser.parse("test_doc.xml")
-    parser.parse("../trec-disk4-5_processed.xml")
+    # parser.parse("../trec-disk4-5_processed.xml")
 
     print(len(ii.dictionary))
     print()
 
     parser.setContentHandler( IndexHandler(ii) )    
-    # parser.parse("test_doc.xml")
-    parser.parse("../trec-disk4-5_processed.xml")
+    parser.parse("test_doc.xml")
+    # parser.parse("../trec-disk4-5_processed.xml")
     # print(ii.bodyIndex)
 
     with open('invertindex.pickle', 'wb') as f:
         pickle.dump(ii, f)
 
+    # print(ii.docInfo)
+    # print(ii.docId)
+    # print(ii.bodyIndex)
