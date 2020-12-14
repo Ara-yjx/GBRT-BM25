@@ -17,12 +17,12 @@ STOPWORDS = {'', 'doesn', 't', 's', 'a', 'about', 'above', 'according', 'across'
 
 REMOVE_PUNCTUATION = str.maketrans(string.punctuation, ' '*len(string.punctuation))
 # @param text: string
-# @return : list(iterable) of bytes's
+# @return : list(iterable) of terms
 def regularizeText(text): 
     text = text.lower()
     text = text.translate(REMOVE_PUNCTUATION)
     terms = text.split(' ')
-    return filter(lambda t: t not in STOPWORDS, map(ks.stem, terms))
+    return list(filter(lambda t: t not in STOPWORDS, map(ks.stem, terms)))
     # return map(ks.stem, terms)
 
 # DocInfo
@@ -31,8 +31,8 @@ def regularizeText(text):
 # InvertedIndex
 #     index: OrderedDict
 #         "term" -> (docid:int, tf:int,)[]
-#     docInfo: int -> DocInfo[]
-#     docId: docno:str -> docid:int
+#     docInfo: DocInfo[]
+#     docCollection: docno:str -> docid:int
 # Handler
 #     ii: InvertedIndex
 
@@ -51,7 +51,7 @@ class InvertedIndex():
         self.dictionary = set()
         self.bodyIndex = {}
         self.docInfo = [] 
-        self.docId = {} # docno -> docid
+        self.docCollection = {} # docno -> docid
 
     def addToDictionary(self, text):
         terms = regularizeText(text)
@@ -66,11 +66,11 @@ class InvertedIndex():
         terms = regularizeText(text)
         for term, freq in Counter(terms).items(): # count terms
             self.bodyIndex[term].append((docid, freq,)) # add to index
+        return len(terms)
 
     def addDocInfo(self, info):
-        self.docId[info.docno] = len(self.docInfo)
+        self.docCollection[info.docno] = len(self.docInfo)
         self.docInfo.append(info)
-        return len(self.docInfo)
         
 
     # def finalizeBody(self):
@@ -81,14 +81,15 @@ class InvertedIndex():
 
 
 
-class LogCounter():
+# DocCounter must be sync with InvertedIndex.docInfo
+class DocCounter():
     def __init__(self):
-        self.__count = 0
+        self.count = 0
 
-    def count(self):
-        self.__count += 1
-        if self.__count % 1000 == 0:
-            print(self.__count // 1000, 'k')
+    def add(self):
+        self.count += 1
+        if self.count % 1000 == 0:
+            print(self.count // 1000, 'k')
 
 
 
@@ -96,7 +97,7 @@ class Handler( xml.sax.ContentHandler ):
     def __init__(self):
         self.recordContent = True # :boolean. Ignore tag content if False
         self.currentContents = ''
-        self.logCounter = LogCounter()
+        self.docCounter = DocCounter()
         super().__init__()
 
     def characters(self, content):
@@ -108,7 +109,6 @@ class Handler( xml.sax.ContentHandler ):
 class DictionaryHandler(Handler):
     def __init__(self, invertedIndex):
         self.ii = invertedIndex
-        self.logDocCount = 0
         super().__init__()
     
     def startElement(self, tag, attributes):
@@ -119,8 +119,7 @@ class DictionaryHandler(Handler):
         if tag == 'TEXT':
             self.ii.addToDictionary(self.currentContents)
         elif tag == 'DOC':
-            self.logCounter.count()
-
+            self.docCounter.add()
 
     def endDocument(self):
         self.ii.finalizeDictionary()
@@ -132,7 +131,7 @@ class IndexHandler(Handler):
         self.ii = invertedIndex
         self.currentDocid = 0
         self.currentDocno = ''
-        self.logDocCount = 0
+        self.currentDocLength = 0
         super().__init__()
 
     def startElement(self, tag, attributes):
@@ -145,11 +144,11 @@ class IndexHandler(Handler):
         # elif tag == 'HEADLINE':
         #     self.ii.addTitle(self.currentContents, self.currentDocid)
         elif tag == 'TEXT':
-            self.ii.addBody(self.currentContents, self.currentDocid)
+            self.currentDocLength = self.ii.addBody(self.currentContents, self.currentDocid)
         elif tag == 'DOC':
             # TODO: count doc length
-            self.currentDocid = self.ii.addDocInfo(DocInfo(0, self.currentDocno))
-            self.logCounter.count()
+            self.ii.addDocInfo(DocInfo(self.currentDocLength, self.currentDocno))
+            self.docCounter.add()
 
 
 
@@ -162,20 +161,21 @@ if __name__ == "__main__":
     parser.setFeature(xml.sax.handler.feature_namespaces, 0) # turn off namepsaces
 
     parser.setContentHandler( DictionaryHandler(ii) )    
-    parser.parse("test_doc.xml")
+    parser.parse("../1m.xml")
+    # parser.parse("test_doc.xml")
     # parser.parse("../trec-disk4-5_processed.xml")
 
-    print(len(ii.dictionary))
+    print(len(ii.dictionary), 'terms')
     print()
 
     parser.setContentHandler( IndexHandler(ii) )    
-    parser.parse("test_doc.xml")
+    parser.parse("../1m.xml")
+    # parser.parse("test_doc.xml")
     # parser.parse("../trec-disk4-5_processed.xml")
-    # print(ii.bodyIndex)
 
-    with open('invertindex.pickle', 'wb') as f:
+    with open('1m.ii', 'wb') as f:
         pickle.dump(ii, f)
 
     # print(ii.docInfo)
-    # print(ii.docId)
+    # print(ii.docCollection)
     # print(ii.bodyIndex)
