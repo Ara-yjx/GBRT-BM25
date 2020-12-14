@@ -1,16 +1,15 @@
-# Load query and ground truth. Read from 'qrels.trec6-8.nocr' and 
+from indexer import regularizeText
+# Load query and ground truth. Read from 'qrels.trec6-8.nocr' 
 
-# [ qid:string, terms:string[] ]
-queriesRaw = []
 # [ qid:string, docno:string, score:int ]
 groundTruthRaw = []
 
 # qid:string -> terms:string[]
 queries = {} 
 # # [ queryTerms:string[], (docid:int, score:int,)[] ] per query
-# groundTruth = []
+# groundTruthAggregate = []
 
-# [ queryTerms:string[], docno:string, score:int ] per doc-query pair
+# [ qid(group):string, queryTerms:string[], docno:string, score:int ] per doc-query pair
 groundTruthExpand = []
 
 # Load query
@@ -19,9 +18,10 @@ with open('../title-queries.301-450', 'r') as f:
         line = f.readline()
         if len(line) == 0:
             break
-        segments = line.split()
-        queriesRaw.append(segments)
-        queries[segments[0]] = tuple(segments[1:])
+        spacePosition = line.find(' ')
+        qid = line[:spacePosition]
+        terms = line[spacePosition+1:-1]
+        queries[qid] = regularizeText(terms)
 
 
 # Load ground truth
@@ -33,4 +33,4 @@ with open('../qrels.trec6-8.nocr', 'r') as f:
         segments = line.split(' ')
         # qid, 0, docno, score
         groundTruthRaw.append((segments[0], segments[2], segments[3],))
-        groundTruthExpand.append((queries[segments[0]], segments[2], int(segments[3]),))
+        groundTruthExpand.append((segments[0], queries[segments[0]], segments[2], int(segments[3]),))
