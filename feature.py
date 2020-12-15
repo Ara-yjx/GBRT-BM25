@@ -1,41 +1,57 @@
+from bisect import bisect_left
 from indexer import *
 from query_loader import queries, groundTruthExpand
-# [ qid(group):string, queryTerms:string[], docno:string, score:int ] 
+# [ qid(group):string, queryTerms:string[], docno:string, relevance:int ] 
 
 # print(groundTruthExpand[0])
 
-ii = InvertedIndex()
-with open('1m.ii', 'rb') as f:
-    ii = pickle.load(f)
+# ii = InvertedIndex().load('trec45.ii')
 
-# [ qid(group):string, features:(tf, idf, docLen, docCount)[], score:int, docno:string ] 
-dataset = []
+# [ qid(group):string, features:(tf, df, docLen, docCount)[], relevance:int, docno:string ] 
+def generateDataset(ii, groundTruthExpand=groundTruthExpand):
+    dataset = []
 
-for docQueryPair in groundTruthExpand:
-    # print(docQueryPair)
-    docno = docQueryPair[2]
+    docCount = len(ii.docInfo)
+    for docQueryPair in groundTruthExpand:
+        # print(docQueryPair)
+        docno = docQueryPair[2]
 
-    if docno in ii.docCollection: # skip unrecorded doc    
-        features = []
-        docId = ii.docCollection[docno]
-        for term in docQueryPair[1]: # for each term
-            if term in ii.bodyIndex: # skip term not in dictionary
-                postings = ii.bodyIndex[term]
-                df = len(postings)
-                # Find the TF of doc 
-                tf = 0
-                for docTf in postings:
-                    if docTf[0] == docId:
-                        tf = docTf[1]
-                    if docTf[0] >= docId:
-                        continue
-                docLength = ii.docInfo[docId].length
-                docCount = len(ii.docInfo)
-                features.append((tf, df, docLength, docCount))
+        if docno in ii.docCollection and len(docQueryPair[1]) != 0: # skip unrecorded doc and empty query
+            features = []
+            docId = ii.docCollection[docno]
+            docLength = ii.docInfo[docId].length
+            if(docLength == 0):
+                print('doclength 0', docQueryPair)
+            for term in docQueryPair[1]: # for each term
+                if term in ii.bodyIndex: # skip term not in dictionary
+                    posting = ii.bodyIndex[term] # :(docid[], tf[],)
+                    df = len(posting[0])
+                    # Find the TF of doc 
+                    position = bisect_left(posting[0], docId)
+                    if position < df and posting[0][position] == docId:
+                        tf = posting[1][position]
+                    else:
+                        tf = 0
+                    # tf = 0
+                    # for docTf in postings:
+                    #     if docTf[0] == docId:
+                    #         tf = docTf[1]
+                    #     if docTf[0] >= docId:
+                    #         continue
+                    features.append((tf, df, docLength, docCount))
 
-        dataset.append((docQueryPair[0], features, docQueryPair[3], docQueryPair[2],))
+            dataset.append((docQueryPair[0], features, docQueryPair[3], docQueryPair[2],))
+            if len(dataset) % 10000 == 0:
+                print(len(dataset))
+
+    return dataset
 
 
 
-# with open('1m.dataset', 'wb') as f:
-    # pickle.dump(dataset, f)
+if __name__ == "__main__":
+    print('Loading inverted index...')
+    ii = InvertedIndex().load('trec45.ii')
+    dataset = generateDataset(ii)
+
+    with open('trec45.ds', 'wb') as f:
+        pickle.dump(dataset, f)

@@ -1,6 +1,7 @@
 from indexer import regularizeText
 # Load query and ground truth. Read from 'qrels.trec6-8.nocr' 
 
+
 # [ qid:string, docno:string, score:int ]
 groundTruthRaw = []
 

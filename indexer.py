@@ -62,12 +62,10 @@ class InvertedIndex():
         for k in self.bodyIndex.keys():
             self.bodyIndex[k] = ([],[],)
     
-    def addBody(self, text, docid):
-        terms = regularizeText(text)
+    def addBody(self, terms, docid):
         for term, freq in Counter(terms).items(): # count terms
             self.bodyIndex[term][0].append(docid) # add to index
             self.bodyIndex[term][1].append(freq)
-        return len(terms)
 
     def addDocInfo(self, info):
         self.docCollection[info.docno] = len(self.docInfo)
@@ -76,11 +74,13 @@ class InvertedIndex():
     def finalizeBody(self):
         # to numpy
         for term in self.dictionary:
-            self.bodyIndex[term] = np.swapaxes(np.array(self.bodyIndex[term], dtype=np.uint32),0,1)
+            self.bodyIndex[term] = np.array(self.bodyIndex[term], dtype=np.uint32)
+            # self.bodyIndex[term] = np.swapaxes(np.array(self.bodyIndex[term], dtype=np.uint32),0,1)
     
     def save(self, filename):
         for term in self.dictionary:
-            self.bodyIndex[term] = np.swapaxes(self.bodyIndex[term],0,1).tolist()
+            self.bodyIndex[term] = self.bodyIndex[term].tolist()
+            # self.bodyIndex[term] = np.swapaxes(self.bodyIndex[term],0,1).tolist()
         with open(filename, 'wb') as f:
             pickle.dump(self, f)
     
@@ -88,7 +88,8 @@ class InvertedIndex():
         with open(filename, 'rb') as f:
             self = pickle.load(f)
         for term in self.dictionary:
-            self.bodyIndex[term] = np.swapaxes(np.array(self.bodyIndex[term], dtype=np.uint32),0,1)
+            self.bodyIndex[term] = np.array(self.bodyIndex[term], dtype=np.uint32)
+            # self.bodyIndex[term] = np.swapaxes(np.array(self.bodyIndex[term], dtype=np.uint32),0,1)
         return self
         
 
@@ -141,9 +142,8 @@ class DictionaryHandler(Handler):
 class IndexHandler(Handler):
     def __init__(self, invertedIndex):
         self.ii = invertedIndex
-        # self.currentDocid = 0
+        self.currentText = ''
         self.currentDocno = ''
-        self.currentDocLength = 0
         super().__init__()
 
     def startElement(self, tag, attributes):
@@ -152,14 +152,17 @@ class IndexHandler(Handler):
     
     def endElement(self, tag):
         if tag == 'DOCNO':
-            self.currentDocno = self.currentContents
+            self.currentDocno = self.currentContents.replace(' ', '')
         # elif tag == 'HEADLINE':
         #     self.ii.addTitle(self.currentContents, self.currentDocid)
         elif tag == 'TEXT':
-            self.currentDocLength = self.ii.addBody(self.currentContents, self.docCounter.count)
+            self.currentText = self.currentContents
         elif tag == 'DOC':
-            self.ii.addDocInfo(DocInfo(self.currentDocLength, self.currentDocno))
-            self.docCounter.add()
+            terms = regularizeText(self.currentText)
+            if len(terms) != 0: # only add non-empty docs
+                self.ii.addBody(terms, self.docCounter.count)   
+                self.ii.addDocInfo(DocInfo(len(terms), self.currentDocno))
+                self.docCounter.add()
 
     def endDocument(self):
         self.ii.finalizeBody()
@@ -183,6 +186,8 @@ def readXml(filename):
 
 
 if __name__ == "__main__":
-    ii = readXml('../1m.xml')
-    ii.save('1m.ii')
+    # ii = readXml('../1m.xml')
+    # ii.save('1m.ii')
+    ii = readXml('../trec-disk4-5_processed.xml')
+    ii.save('trec45.ii')
 
