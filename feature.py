@@ -3,25 +3,29 @@ from indexer import *
 from query_loader import queries, groundTruthExpand
 # [ qid(group):string, queryTerms:string[], docno:string, relevance:int ] 
 
-# print(groundTruthExpand[0])
 
-# ii = InvertedIndex().load('trec45.ii')
-
-# [ qid(group):string, features:(tf, df, docLen, docCount)[], relevance:int, docno:string ] 
+# [ <0>qid(group):string, 
+#   <1>features:(tf, df)[],  <2>docLen, <3>avgDocLen, <4>docCount, 
+#   <5>relevance:int, 
+#   <6>docno:string ] 
 def generateDataset(ii, groundTruthExpand=groundTruthExpand):
     dataset = []
 
     docCount = len(ii.docInfo)
+    totalDocLen = 0
+
     for docQueryPair in groundTruthExpand:
         # print(docQueryPair)
         docno = docQueryPair[2]
 
         if docno in ii.docCollection and len(docQueryPair[1]) != 0: # skip unrecorded doc and empty query
-            features = []
             docId = ii.docCollection[docno]
-            docLength = ii.docInfo[docId].length
-            if(docLength == 0):
-                print('doclength 0', docQueryPair)
+            docLen = ii.docInfo[docId].length
+            if(docLen == 0):
+                print('docLen 0', docQueryPair)
+            totalDocLen += docLen
+
+            termFeatures = []
             for term in docQueryPair[1]: # for each term
                 if term in ii.bodyIndex: # skip term not in dictionary
                     posting = ii.bodyIndex[term] # :(docid[], tf[],)
@@ -32,17 +36,15 @@ def generateDataset(ii, groundTruthExpand=groundTruthExpand):
                         tf = posting[1][position]
                     else:
                         tf = 0
-                    # tf = 0
-                    # for docTf in postings:
-                    #     if docTf[0] == docId:
-                    #         tf = docTf[1]
-                    #     if docTf[0] >= docId:
-                    #         continue
-                    features.append((tf, df, docLength, docCount))
+                    termFeatures.append((tf, df,))
 
-            dataset.append((docQueryPair[0], features, docQueryPair[3], docQueryPair[2],))
+            dataset.append([docQueryPair[0], termFeatures, docLen, 0, docCount, docQueryPair[3], docQueryPair[2],])
             if len(dataset) % 10000 == 0:
-                print(len(dataset))
+                print(len(dataset) / 1000, 'k...')
+
+    avgDocLen = totalDocLen / len(dataset)
+    for i in dataset:
+        i[3] = avgDocLen
 
     return dataset
 
