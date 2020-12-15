@@ -30,7 +30,7 @@ def regularizeText(text):
 #     docno: string
 # InvertedIndex
 #     index: OrderedDict
-#         "term" -> (docid:int, tf:int,)[]
+#         "term" -> (docid:np.int32[], tf:int16[],)
 #     docInfo: DocInfo[]
 #     docCollection: docno:str -> docid:int
 # Handler
@@ -60,25 +60,37 @@ class InvertedIndex():
     def finalizeDictionary(self):
         self.bodyIndex = dict.fromkeys(self.dictionary)
         for k in self.bodyIndex.keys():
-            self.bodyIndex[k] = []
+            self.bodyIndex[k] = ([],[],)
     
     def addBody(self, text, docid):
         terms = regularizeText(text)
         for term, freq in Counter(terms).items(): # count terms
-            self.bodyIndex[term].append((docid, freq,)) # add to index
+            self.bodyIndex[term][0].append(docid) # add to index
+            self.bodyIndex[term][1].append(freq)
         return len(terms)
 
     def addDocInfo(self, info):
         self.docCollection[info.docno] = len(self.docInfo)
         self.docInfo.append(info)
         
-
-    # def finalizeBody(self):
-    #     # remove stopwords
-    #     for stopword in STOPWORDS:
-    #         if stopword in self.bodyIndex:
-    #             del self.bodyIndex[stopword]
-
+    def finalizeBody(self):
+        # to numpy
+        for term in self.dictionary:
+            self.bodyIndex[term] = np.swapaxes(np.array(self.bodyIndex[term], dtype=np.uint32),0,1)
+    
+    def save(self, filename):
+        for term in self.dictionary:
+            self.bodyIndex[term] = np.swapaxes(self.bodyIndex[term],0,1).tolist()
+        with open(filename, 'wb') as f:
+            pickle.dump(self, f)
+    
+    def load(self, filename):
+        with open(filename, 'rb') as f:
+            self = pickle.load(f)
+        for term in self.dictionary:
+            self.bodyIndex[term] = np.swapaxes(np.array(self.bodyIndex[term], dtype=np.uint32),0,1)
+        return self
+        
 
 
 # DocCounter must be sync with InvertedIndex.docInfo
@@ -88,7 +100,7 @@ class DocCounter():
 
     def add(self):
         self.count += 1
-        if self.count % 1000 == 0:
+        if self.count % 10000 == 0:
             print(self.count // 1000, 'k')
 
 
@@ -129,7 +141,7 @@ class DictionaryHandler(Handler):
 class IndexHandler(Handler):
     def __init__(self, invertedIndex):
         self.ii = invertedIndex
-        self.currentDocid = 0
+        # self.currentDocid = 0
         self.currentDocno = ''
         self.currentDocLength = 0
         super().__init__()
@@ -144,38 +156,33 @@ class IndexHandler(Handler):
         # elif tag == 'HEADLINE':
         #     self.ii.addTitle(self.currentContents, self.currentDocid)
         elif tag == 'TEXT':
-            self.currentDocLength = self.ii.addBody(self.currentContents, self.currentDocid)
+            self.currentDocLength = self.ii.addBody(self.currentContents, self.docCounter.count)
         elif tag == 'DOC':
-            # TODO: count doc length
             self.ii.addDocInfo(DocInfo(self.currentDocLength, self.currentDocno))
             self.docCounter.add()
 
+    def endDocument(self):
+        self.ii.finalizeBody()
 
 
 
-
-if __name__ == "__main__":
+def readXml(filename):
+    print('Reading xml file', filename)
     ii = InvertedIndex()
-
     parser = xml.sax.make_parser()
     parser.setFeature(xml.sax.handler.feature_namespaces, 0) # turn off namepsaces
 
     parser.setContentHandler( DictionaryHandler(ii) )    
-    parser.parse("../1m.xml")
-    # parser.parse("test_doc.xml")
-    # parser.parse("../trec-disk4-5_processed.xml")
-
-    print(len(ii.dictionary), 'terms')
-    print()
+    parser.parse(filename)
+    print('Dictionary size:', len(ii.dictionary), 'terms')
 
     parser.setContentHandler( IndexHandler(ii) )    
-    parser.parse("../1m.xml")
-    # parser.parse("test_doc.xml")
-    # parser.parse("../trec-disk4-5_processed.xml")
+    parser.parse(filename)
+    print('Document count:', len(ii.docInfo))
+    return ii
 
-    with open('1m.ii', 'wb') as f:
-        pickle.dump(ii, f)
 
-    # print(ii.docInfo)
-    # print(ii.docCollection)
-    # print(ii.bodyIndex)
+if __name__ == "__main__":
+    ii = readXml('../1m.xml')
+    ii.save('1m.ii')
+
