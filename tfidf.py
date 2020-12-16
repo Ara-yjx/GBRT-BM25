@@ -4,12 +4,11 @@ from indexer import *
 from feature import *
 from eval import dcg, ndcg
 
+# dataset:
 # [ <0>qid(group):string, 
 #   <1>features:(tf, df)[],  <2>docLen, <3>avgDocLen, <4>docCount, 
 #   <5>relevance:int, 
 #   <6>docno:string ] 
-with open('trec45.ds', 'rb') as f:
-    dataset = pickle.load(f)
 
 def F_tfidf(tf, df, docLen, avgDocLen, docCount):
     if df == 0 or docLen == 0:
@@ -24,8 +23,7 @@ def F_bm25(tf, df, docLen, avgDocLen, docCount):
     return idfPart * tfPart
 
 # formula:  <0>tf, <1>df, <2>docLen, <3>avgDocLen, <4>docCount, 
-def computeScore(formula):
-
+def computeScore(formula, dataset):
     # qid -> (score, relevance, docno)[]
     queryScores = {}
 
@@ -50,16 +48,63 @@ def computeScore(formula):
         ndcg5.append(ndcg(5, predict, truth))
         ndcg10.append(ndcg(10, predict, truth))
 
-    print('ndcg5 :', np.mean(ndcg5))
-    print('ndcg10:', np.mean(ndcg10))
     return (ndcg5, ndcg10)
 
-print('tf-idf')
-computeScore(F_tfidf)
-print('bm25')
-computeScore(F_bm25)
 
-# print(queryScores)
 
-# for qid, scores in queryScores.items():
+if __name__ == "__main__":
     
+    with open('trec45.ds', 'rb') as f:
+        dataset = pickle.load(f)
+
+    # Group
+    datasetNGram = [[],[],[],[]]
+    oversizeGram = 0
+    for datarow in dataset:
+        if len(datarow[1]) <= 4:
+            datasetNGram[ len(datarow[1])-1 ].append(datarow)
+
+    for i in range(4):
+        print(i+1, 'gram')
+        print('tf-idf')
+        ndcg5, ndcg10 = computeScore(F_tfidf, datasetNGram[i])
+        print('ndcg5 :', np.mean(ndcg5))
+        print('ndcg10:', np.mean(ndcg10))
+        print('bm25')
+        ndcg5, ndcg10 = computeScore(F_bm25, datasetNGram[i])
+        print('ndcg5 :', np.mean(ndcg5))
+        print('ndcg10:', np.mean(ndcg10))
+        print()
+
+# Result:
+# 1 gram
+# tf-idf
+# ndcg5 : 0.5173693318161369
+# ndcg10: 0.47089861053882215
+# bm25
+# ndcg5 : 0.5701882838399329
+# ndcg10: 0.555435606341711
+
+# 2 gram
+# tf-idf
+# ndcg5 : 0.15054793396987923
+# ndcg10: 0.1590246038705892
+# bm25
+# ndcg5 : 0.4133191177404347
+# ndcg10: 0.4125877334139463
+
+# 3 gram
+# tf-idf
+# ndcg5 : 0.1704988000671355
+# ndcg10: 0.1611449925612211
+# bm25
+# ndcg5 : 0.45748160427386736
+# ndcg10: 0.42326618208766437
+
+# 4 gram
+# tf-idf
+# ndcg5 : 0.0
+# ndcg10: 0.020012383435365922
+# bm25
+# ndcg5 : 0.4737194277664056
+# ndcg10: 0.4494863553003425
