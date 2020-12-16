@@ -55,23 +55,17 @@ def computeScore(formula, dataset):
 if __name__ == "__main__":
     
     with open('trec45.ds', 'rb') as f:
-        dataset = pickle.load(f)
+        nGramDataset = pickle.load(f)
 
-    # Group
-    datasetNGram = [[],[],[],[]]
-    oversizeGram = 0
-    for datarow in dataset:
-        if len(datarow[1]) <= 4:
-            datasetNGram[ len(datarow[1])-1 ].append(datarow)
 
-    for i in range(4):
+    for i in range(1,5):
         print(i+1, 'gram')
         print('tf-idf')
-        ndcg5, ndcg10 = computeScore(F_tfidf, datasetNGram[i])
+        ndcg5, ndcg10 = computeScore(F_tfidf, nGramDataset[i])
         print('ndcg5 :', np.mean(ndcg5))
         print('ndcg10:', np.mean(ndcg10))
         print('bm25')
-        ndcg5, ndcg10 = computeScore(F_bm25, datasetNGram[i])
+        ndcg5, ndcg10 = computeScore(F_bm25, nGramDataset[i])
         print('ndcg5 :', np.mean(ndcg5))
         print('ndcg10:', np.mean(ndcg10))
         print()

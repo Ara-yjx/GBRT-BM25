@@ -25,6 +25,7 @@ def generateDataset(ii, groundTruthExpand=groundTruthExpand):
                 print('docLen 0', docQueryPair)
             totalDocLen += docLen
 
+            # Retrieve tf and df
             termFeatures = []
             for term in docQueryPair[1]: # for each term
                 if term in ii.bodyIndex: # skip term not in dictionary
@@ -42,11 +43,20 @@ def generateDataset(ii, groundTruthExpand=groundTruthExpand):
             if len(dataset) % 10000 == 0:
                 print(len(dataset) / 1000, 'k...')
 
+    # Add avgDocLen
     avgDocLen = totalDocLen / len(dataset)
     for i in dataset:
         i[3] = avgDocLen
 
-    return dataset
+    # Group by n-gram
+    nGramDataset = [[],[],[],[],[]] # [0] is oversize gram (>4 gram)
+    for datarow in dataset:
+        if len(datarow[1]) <= 4:
+            nGramDataset[ len(datarow[1]) ].append(datarow)
+        else:
+            nGramDataset[ 0 ].append(datarow)
+            
+    return nGramDataset
 
 
 
