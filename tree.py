@@ -4,7 +4,7 @@ import numpy as np
 from catboost import Pool, CatBoost
 from indexer import *
 from feature import *
-from evaluator import dcg, ndcg, evalUnsorted
+from evaluator import dcg, ndcg, evalUnsorted, verbose
 from itertools import permutations
 
 # avgDocLen and docCount is not included as a feature
@@ -32,6 +32,10 @@ def permute(dataset):
             permutedDataset.append(permutedDatarow)
     return permutedDataset
 
+def unpermute(pred, ngram):
+    p = math.factorial(ngram) # number of permutation
+    return [ np.mean(pred[i:i+p]) for i in range(0, len(pred), p) ]
+            
 
 # Group dataset[] by groupid[]
 # Return dict: groupid -> dataset[:]
@@ -90,8 +94,9 @@ if __name__ == "__main__":
         nGramDataset = pickle.load(f)
     print('nGram:', list(map(len, nGramDataset)))
 
-    dataset = nGramDataset[2]
-    dataset = permute(dataset)
+    NGRAM = 3
+    dataset = nGramDataset[NGRAM]
+    # dataset = permute(dataset)
     shuffle(dataset)
     groupDataset = group(dataset, (d[0] for d in dataset))
 
@@ -99,11 +104,13 @@ if __name__ == "__main__":
 
     for train, test in kfold(groupDataset, len(dataset), 4):
 
+
         print('len(train) =', len(train))
         print('len(test)  =', len(test))
-
-        train_groupid, train_data, train_label = seperate(train)
-        test_groupid, test_data, test_label = seperate(test)
+        
+        train_groupid, train_data, train_label = seperate(permute(train))
+        _, _, test_label_unpermute = seperate(test)
+        test_groupid, test_data, test_label = seperate(permute(test))
         train_pool = Pool(train_data, train_label, group_id=train_groupid)
         test_pool = Pool(test_data, test_label, group_id=test_groupid)
 
@@ -112,41 +119,36 @@ if __name__ == "__main__":
             'loss_function': 'YetiRank',
             # 'learn_metrics': 'NDCG',
             'custom_metric': ['NDCG:top=10;hints=skip_train~false','MAP:top=10;hints=skip_train~false'],
-            'iterations': 300,
+            'iterations': 500,
             'depth': 4,
-            'learning_rate': 0.01
+            'learning_rate': 0.01,
             # 'verbose': False,
             # 'task_type': "GPU",
         }
         model = CatBoost(param)
         model.fit(train_pool)
         predicts = model.predict(test_pool)
+        predicts_unpermute = unpermute(predicts, NGRAM)
 
         # Evaluate
         groupResult = [] # return values of evalUnsorted()
         groupSize = []
 
         # Zip, group, unzip : predicts[], rel[]
-        grouped_pred_rel = group(zip(predicts, test_label), test_groupid)
+        grouped_pred_rel = group(zip(predicts_unpermute, test_label_unpermute), test_groupid)
         for groupid, pred_rel in grouped_pred_rel.items():
             preds, rel = tuple(zip(*pred_rel))
 
             groupResult.append( evalUnsorted(preds, rel) )
             groupSize.append( len(groupDataset[groupid]) )
 
-        # print(groupResult)
-
         foldResult = np.average(groupResult, weights=groupSize, axis=0)
         foldResults.append(foldResult)
         print(foldResult)
-
         print()
 
     gramResult = np.average(foldResults, axis=0)
     print(gramResult)
+    verbose(gramResult)
 
-    # [0.56485243 0.55001862]
-
-
-    # [0.38388007 0.37443232]
 

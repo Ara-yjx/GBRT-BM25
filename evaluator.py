@@ -35,3 +35,11 @@ def evalUnsorted(predict, truth):
     map10 = avgPrecision(10, preds_rel)
     map25 = avgPrecision(25, preds_rel)
     return (ndcg5, ndcg10, ndcg25, map5, map10, map25, )
+
+def verbose(result):
+    print('ndcg5 :', round(result[0], 4))
+    print('ndcg10:', round(result[1], 4))
+    print('ndcg25:', round(result[2], 4))
+    print('map5  :', round(result[3], 4))
+    print('map10 :', round(result[4], 4))
+    print('map25 :', round(result[5], 4))
