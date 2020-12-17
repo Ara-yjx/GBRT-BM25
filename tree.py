@@ -23,6 +23,7 @@ from itertools import permutations
 
 
 # switch the order of query terms for more data
+# groupid(qid): xxx -> xxx:xx
 def permute(dataset):
     permutedDataset = []
     for datarow in dataset:
@@ -31,6 +32,22 @@ def permute(dataset):
             permutedDatarow[1] = p
             permutedDataset.append(permutedDatarow)
     return permutedDataset
+
+
+# cannot exceed 1023 queries per group for GPU
+def subgroup(dataset):
+    SUBGROUPSIZE = 1000
+    subgroupId = '' 
+    subgroupCount = 0 
+    for datarow in dataset:
+        if datarow[0] != subgroupId:
+            subgroupId = datarow[0]
+            subgroupCount = 0
+        else:
+            subgroupCount += 1
+        datarow[0] += ':' + str(int(subgroupCount // SUBGROUPSIZE))
+    return dataset
+
 
 def unpermute(pred, ngram):
     p = math.factorial(ngram) # number of permutation
@@ -94,7 +111,7 @@ if __name__ == "__main__":
         nGramDataset = pickle.load(f)
     print('nGram:', list(map(len, nGramDataset)))
 
-    NGRAM = 3
+    NGRAM = 2
     dataset = nGramDataset[NGRAM]
     # dataset = permute(dataset)
     shuffle(dataset)
@@ -108,7 +125,8 @@ if __name__ == "__main__":
         print('len(train) =', len(train))
         print('len(test)  =', len(test))
         
-        train_groupid, train_data, train_label = seperate(permute(train))
+        # train_permute, train_groupsize = permute(train)
+        train_groupid, train_data, train_label = seperate(subgroup(permute(train)))
         _, _, test_label_unpermute = seperate(test)
         test_groupid, test_data, test_label = seperate(permute(test))
         train_pool = Pool(train_data, train_label, group_id=train_groupid)
@@ -119,11 +137,12 @@ if __name__ == "__main__":
             'loss_function': 'YetiRank',
             # 'learn_metrics': 'NDCG',
             'custom_metric': ['NDCG:top=10;hints=skip_train~false','MAP:top=10;hints=skip_train~false'],
+            'metric_period': 5,
             'iterations': 500,
             'depth': 4,
             'learning_rate': 0.01,
             # 'verbose': False,
-            # 'task_type': "GPU",
+            'task_type': "GPU",
         }
         model = CatBoost(param)
         model.fit(train_pool)
