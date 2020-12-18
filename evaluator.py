@@ -34,24 +34,17 @@ def evalUnsorted(predict, truth):
    
     ndcg5  = ndcg(5 , preds_rel, optimal_rel)
     ndcg10 = ndcg(10, preds_rel, optimal_rel)
-    ndcg25 = ndcg(25, preds_rel, optimal_rel)
+    ndcg20 = ndcg(20, preds_rel, optimal_rel)
     map5  = avgPrecision(5 , preds_rel)
     map10 = avgPrecision(10, preds_rel)
-    map25 = avgPrecision(25, preds_rel)
+    map20 = avgPrecision(20, preds_rel)
     p5  = precision(5 , preds_rel)
     p10 = precision(10, preds_rel)
-    p25 = precision(25, preds_rel)
-    return (ndcg5, ndcg10, ndcg25, map5, map10, map25, p5, p10, p25)
+    p20 = precision(20, preds_rel)
+    return (ndcg5, ndcg10, ndcg20, map5, map10, map20, p5, p10, p20)
 
 
 def verbose(result):
-    print('ndcg5 :', round(result[0], 4))
-    print('ndcg10:', round(result[1], 4))
-    print('ndcg25:', round(result[2], 4))
-    print('map5  :', round(result[3], 4))
-    print('map10 :', round(result[4], 4))
-    print('map25 :', round(result[5], 4))
-    print('p5    :', round(result[6], 4))
-    print('p10   :', round(result[7], 4))
-    print('p25   :', round(result[8], 4))
-
+    print('ndcg @ 5/10/20 :', result[0:3])
+    print(' map @ 5/10/20 :', result[3:6])
+    print('   p @ 5/10/20 :', result[6:9])
