@@ -1,5 +1,6 @@
 import math
-from random import shuffle, randrange
+from random import shuffle, randrange, sample
+import argparse
 import numpy as np
 from catboost import Pool, CatBoost
 from indexer import *
@@ -64,14 +65,19 @@ def ungroup(groupDataset):
 # groupid(qid): xxx -> xxx:xx
 def subgroup(dataset):
     result = []
-    groupDataset = group(dataset, [x[0] for x in dataset])
+    groupDataset = group(dataset)
     for ds in groupDataset.values():
-        shuffle(ds)
-        expectSubgroupCount = math.ceil(len(ds) / MAX_QUERY_SIZE)
-        for datarow in ds:
-            result.append(datarow)
-            result[-1][0] += ':' + str(len(result) % expectSubgroupCount)
-    return ungroup(group(result, [x[0] for x in result]))
+        if len(ds) > MAX_QUERY_SIZE:
+            subgroupCount = math.ceil((len(ds) / MAX_QUERY_SIZE)**2)
+            for subgroupId in range(subgroupCount):
+                subgroup = sample(ds, MAX_QUERY_SIZE)
+                for datarow in subgroup:
+                    newDatarow = datarow[:]
+                    newDatarow[0] += ':' + str(subgroupId)
+                    result.append(newDatarow)
+        else:
+            result += ds
+    return result
 
 
 # Split grouped dataset into train and test data of k folds
@@ -116,12 +122,18 @@ def seperate(dataset):
 
 
 if __name__ == "__main__":
-    _NGRAM = 2
-    FOLD = 4
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', help='dataset file from feature.py')
+    parser.add_argument('--iteration', type=int, help='number of repetition for average result')
+    parser.add_argument('--fold', type=int, help='k-fold validation')
+    args = parser.parse_args()
+    datasetFile = 'dataset.pickle' if args.dataset is None else args.dataset
+    ITERATION = 3 if args.iteration is None else args.iteration
+    FOLD = 4 if args.fold is None else args.fold
 
-    with open('trec45.ds', 'rb') as f:
+    with open(datasetFile, 'rb') as f:
         nGramDataset = pickle.load(f)
-    print('nGram:', list(map(len, nGramDataset)))
+    # print('nGram:', list(map(len, nGramDataset)))
 
     def run(NGRAM):
 
@@ -136,6 +148,8 @@ if __name__ == "__main__":
             if len(groupTrain) == 0 or len(groupTest) == 0:
                 continue
 
+            print('Training', NGRAM, 'gram,', 'fold', len(foldResults)+1)
+
             # Select 20% from each group as eval
             evalDataset = []
             for gid, ds in groupTrain.items():
@@ -147,8 +161,8 @@ if __name__ == "__main__":
             eval_pool = Pool(eval_data, eval_label, group_id=eval_groupid)
 
             train = ungroup(groupTrain)
-            # train = subgroup(permute(train))
-            train = permute(train)
+            train = subgroup(permute(train))
+            # train = permute(train)
             train_groupid, train_data, train_label = seperate(train)
             train_pool = Pool(train_data, train_label, group_id=train_groupid)
             print('len(train) =', len(train))        
@@ -164,9 +178,9 @@ if __name__ == "__main__":
             param = {
                 'loss_function': 'StochasticRank:metric=NDCG;top=10',
                 # 'loss_function': 'YetiRank',
-                # 'learn_metrics': 'NDCG',
                 'eval_metric': 'NDCG:top=10',
-                'custom_metric': ['NDCG:top=10;hints=skip_train~false','MAP:top=10;hints=skip_train~false'],
+                # 'custom_metric': ['NDCG:top=10;hints=skip_train~false','MAP:top=10;hints=skip_train~false'],
+                'custom_metric': ['NDCG:top=10;hints=skip_train~false'],
                 'metric_period': 5,
                 'iterations': 1000,
                 'depth': 4,
@@ -199,19 +213,14 @@ if __name__ == "__main__":
         gramResult = np.average(foldResults, axis=0)
         print(gramResult)
         return gramResult
-        # verbose(gramResult)
 
 
     allResult = [[],[],[],[],[]]
     for NGRAM in range(1,4):
-        for t in range(5):
+        for t in range(ITERATION):
             allResult[NGRAM].append( run(NGRAM) )
-        try:
-            allResult[NGRAM].append(np.average(allResult[NGRAM], axis=0))
-        except expression as identifier:
-            pass
+        allResult[NGRAM] = (np.average(allResult[NGRAM], axis=0))
     for NGRAM in range(1,4):
         print(NGRAM, 'gram')
-        for j in allResult[NGRAM]:
-            print(j)
-
+        verbose(allResult[NGRAM])
+        print()

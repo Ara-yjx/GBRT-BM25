@@ -1,5 +1,6 @@
 import numpy as np
 import string
+import argparse
 from collections import Counter
 import pickle
 import xml.sax
@@ -170,7 +171,7 @@ class IndexHandler(Handler):
 
 
 def readXml(filename):
-    print('Reading xml file', filename)
+    print('Reading XML file', filename)
     ii = InvertedIndex()
     parser = xml.sax.make_parser()
     parser.setFeature(xml.sax.handler.feature_namespaces, 0) # turn off namepsaces
@@ -185,9 +186,15 @@ def readXml(filename):
     return ii
 
 
+
 if __name__ == "__main__":
-    # ii = readXml('../1m.xml')
-    # ii.save('1m.ii')
-    ii = readXml('../trec-disk4-5_processed.xml')
-    ii.save('trec45.ii')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--trec', help='TREC disk 4-5 file')
+    parser.add_argument('--invertedindex', help='inverted index file to output')
+    args = parser.parse_args()
+    trecFile = 'trec-disk4-5_processed.xml' if args.trec is None else args.trec
+    iiFile = 'invertedindex.pickle' if args.invertedindex is None else args.invertedindex
+
+    ii = readXml(trecFile)
+    ii.save(iiFile)
 

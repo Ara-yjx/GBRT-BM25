@@ -1,6 +1,7 @@
 from bisect import bisect_left
+import argparse
 from indexer import *
-from query_loader import queries, groundTruthExpand
+from query_loader import loadGroundtruth
 # [ qid(group):string, queryTerms:string[], docno:string, relevance:int ] 
 
 
@@ -8,14 +9,14 @@ from query_loader import queries, groundTruthExpand
 #   <1>features:(tf, df)[],  <2>docLen, <3>avgDocLen, <4>docCount, 
 #   <5>relevance:int, 
 #   <6>docno:string ] 
-def generateDataset(ii, groundTruthExpand=groundTruthExpand):
+def generateDataset(ii, groundtruth):
     dataset = []
 
     docCount = len(ii.docInfo)
     totalDocLen = 0
 
-    for docQueryPair in groundTruthExpand:
-        # print(docQueryPair)
+    for docQueryPair in groundtruth:
+        # print(docQueryPair)eval
         docno = docQueryPair[2]
 
         if docno in ii.docCollection and len(docQueryPair[1]) != 0: # skip unrecorded doc and empty query
@@ -61,9 +62,21 @@ def generateDataset(ii, groundTruthExpand=groundTruthExpand):
 
 
 if __name__ == "__main__":
-    print('Loading inverted index...')
-    ii = InvertedIndex().load('trec45.ii')
-    dataset = generateDataset(ii)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--invertedindex', help='inverted index file from indexer.py')
+    parser.add_argument('--query', help='queries title file')
+    parser.add_argument('--relevance', help='relevance file of doc-query pair')
+    parser.add_argument('--dataset', help='dataset file to output')
+    args = parser.parse_args()
+    iiFile = 'invertedindex.pickle' if args.invertedindex is None else args.invertedindex
+    queryFile = 'title-queries.301-450' if args.query is None else args.query
+    groundtruthFile = 'qrels.trec6-8.nocr' if args.relevance is None else args.relevance
+    datasetFile = 'dataset.pickle' if args.dataset is None else args.dataset
 
-    with open('trec45.ds', 'wb') as f:
+    print('Loading inverted index...')
+    ii = InvertedIndex().load(iiFile)
+    groundtruth = loadGroundtruth(queryFile, groundtruthFile)
+    dataset = generateDataset(ii, groundtruth)
+
+    with open(datasetFile, 'wb') as f:
         pickle.dump(dataset, f)

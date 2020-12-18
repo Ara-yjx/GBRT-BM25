@@ -1,8 +1,10 @@
 import pickle
 import math
+import numpy as np
+import argparse
 from indexer import *
 from feature import *
-from eval import dcg, ndcg
+from evaluator import evalUnsorted, verbose
 
 # dataset:
 # [ <0>qid(group):string, 
@@ -38,67 +40,64 @@ def computeScore(formula, dataset):
         queryScores[qid].append((score, datarow[5], datarow[6],))
 
     # Rank and Evaluate
-    ndcg5 = []
-    ndcg10 = []
+    groupResults = []
+    groupWeights = []
     for qid, docScores in queryScores.items():
         # Sort and extract item
         predict = [ x[1] for x in sorted(docScores, key=lambda x:x[0], reverse=True) ]
         truth   = [ x[1] for x in sorted(docScores, key=lambda x:x[1], reverse=True) ]
         # truth   = sorted((x[1] for x in docScores), reverse=True)
-        ndcg5.append(ndcg(5, predict, truth))
-        ndcg10.append(ndcg(10, predict, truth))
-
-    return (ndcg5, ndcg10)
+        groupResults.append(evalUnsorted(predict, truth))
+        groupWeights.append(len(docScores))
+    return np.average(groupResults, weights=groupWeights, axis=0)
 
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', help='dataset file from feature.py')
+    args = parser.parse_args()
+    datasetFile = 'dataset.pickle' if args.dataset is None else args.dataset
     
-    with open('trec45.ds', 'rb') as f:
+    with open(datasetFile, 'rb') as f:
         nGramDataset = pickle.load(f)
 
-
-    for i in range(1,5):
-        print(i+1, 'gram')
-        print('tf-idf')
-        ndcg5, ndcg10 = computeScore(F_tfidf, nGramDataset[i])
-        print('ndcg5 :', np.mean(ndcg5))
-        print('ndcg10:', np.mean(ndcg10))
-        print('bm25')
-        ndcg5, ndcg10 = computeScore(F_bm25, nGramDataset[i])
-        print('ndcg5 :', np.mean(ndcg5))
-        print('ndcg10:', np.mean(ndcg10))
+    for i in range(1,4):
+        print(i, 'gram')
+        # print('tf-idf')
+        # verbose( computeScore(F_tfidf, nGramDataset[i]) )
+        # print('bm25')
+        verbose( computeScore(F_bm25, nGramDataset[i]) )
         print()
 
-# Result:
+
+# Result: 
 # 1 gram
 # tf-idf
-# ndcg5 : 0.5173693318161369
-# ndcg10: 0.47089861053882215
+# ndcg @ 5/10/20 : [0.36206385 0.32825502 0.30206731]
+#  map @ 5/10/20 : [0.36893413 0.2979647  0.22252176]
+#    p @ 5/10/20 : [0.27154981 0.1943827  0.13398666]
 # bm25
-# ndcg5 : 0.5701882838399329
-# ndcg10: 0.555435606341711
+# ndcg @ 5/10/20 : [0.3563609  0.36088165 0.34030086]
+#  map @ 5/10/20 : [0.33977975 0.30981853 0.26329994]
+#    p @ 5/10/20 : [0.30553647 0.26825621 0.1857547 ]
 
 # 2 gram
 # tf-idf
-# ndcg5 : 0.15054793396987923
-# ndcg10: 0.1590246038705892
+# ndcg @ 5/10/20 : [0.11316327 0.11098704 0.10985822]
+#  map @ 5/10/20 : [0.12534775 0.10955492 0.09826392]
+#    p @ 5/10/20 : [0.10347871 0.09381523 0.08354938]
 # bm25
-# ndcg5 : 0.4133191177404347
-# ndcg10: 0.4125877334139463
+# ndcg @ 5/10/20 : [0.27174384 0.24711309 0.22783634]
+#  map @ 5/10/20 : [0.30674497 0.25645639 0.21504276]
+#    p @ 5/10/20 : [0.23066388 0.19492841 0.15609781]
 
 # 3 gram
 # tf-idf
-# ndcg5 : 0.1704988000671355
-# ndcg10: 0.1611449925612211
+# ndcg @ 5/10/20 : [0.13644259 0.12080805 0.11756597]
+#  map @ 5/10/20 : [0.1477735  0.12133183 0.10497895]
+#    p @ 5/10/20 : [0.11333696 0.09263763 0.09096014]
 # bm25
-# ndcg5 : 0.45748160427386736
-# ndcg10: 0.42326618208766437
-
-# 4 gram
-# tf-idf
-# ndcg5 : 0.0
-# ndcg10: 0.020012383435365922
-# bm25
-# ndcg5 : 0.4737194277664056
-# ndcg10: 0.4494863553003425
+# ndcg @ 5/10/20 : [0.26034796 0.21479248 0.19817659]
+#  map @ 5/10/20 : [0.32441909 0.24932233 0.19884574]
+#    p @ 5/10/20 : [0.21554023 0.15822365 0.1423286 ]
