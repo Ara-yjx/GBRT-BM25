@@ -18,6 +18,10 @@ def ndcg(p, predict, truth):
     return dcg(predict[:p]) / idcg
 
 
+def precision(p, rel):
+    return np.mean(rel[:p])
+
+
 def avgPrecision(p, rel):
     precision = [ np.mean(rel[:i+1]) for i in range(p)]
     return np.mean(precision)
@@ -34,7 +38,11 @@ def evalUnsorted(predict, truth):
     map5  = avgPrecision(5 , preds_rel)
     map10 = avgPrecision(10, preds_rel)
     map25 = avgPrecision(25, preds_rel)
-    return (ndcg5, ndcg10, ndcg25, map5, map10, map25, )
+    p5  = precision(5 , preds_rel)
+    p10 = precision(10, preds_rel)
+    p25 = precision(25, preds_rel)
+    return (ndcg5, ndcg10, ndcg25, map5, map10, map25, p5, p10, p25)
+
 
 def verbose(result):
     print('ndcg5 :', round(result[0], 4))
@@ -43,3 +51,7 @@ def verbose(result):
     print('map5  :', round(result[3], 4))
     print('map10 :', round(result[4], 4))
     print('map25 :', round(result[5], 4))
+    print('p5    :', round(result[6], 4))
+    print('p10   :', round(result[7], 4))
+    print('p25   :', round(result[8], 4))
+
