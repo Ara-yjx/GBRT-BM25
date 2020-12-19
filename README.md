@@ -32,7 +32,7 @@ Copy necessary data file into project directory
     feature dataset -> tree.py  
     `$ python tree.py` 
 
-    Run BM25 as baseline
+    Compute BM25 as baseline  
     feature dataset -> tfidf.py  
     `$ python tfidf.py`
 

@@ -161,8 +161,8 @@ if __name__ == "__main__":
             eval_pool = Pool(eval_data, eval_label, group_id=eval_groupid)
 
             train = ungroup(groupTrain)
-            train = subgroup(permute(train))
-            # train = permute(train)
+            # train = subgroup(permute(train))
+            train = permute(train)
             train_groupid, train_data, train_label = seperate(train)
             train_pool = Pool(train_data, train_label, group_id=train_groupid)
             print('len(train) =', len(train))        
@@ -180,7 +180,7 @@ if __name__ == "__main__":
                 # 'loss_function': 'YetiRank',
                 'eval_metric': 'NDCG:top=10',
                 # 'custom_metric': ['NDCG:top=10;hints=skip_train~false','MAP:top=10;hints=skip_train~false'],
-                'custom_metric': ['NDCG:top=10;hints=skip_train~false'],
+                # 'custom_metric': ['NDCG:top=10;hints=skip_train~false'],
                 'metric_period': 5,
                 'iterations': 1000,
                 'depth': 4,
