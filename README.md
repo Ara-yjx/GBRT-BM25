@@ -53,7 +53,7 @@ Copy necessary data file into project directory
 | --dataset       | dataset file from feature.py | `dataset.pickle` |
 | tree.py | |
 | --dataset       | dataset file from feature.py | `dataset.pickle` |
-| --iteration     | (int) number of repetition for average result | `3` |
+| --iteration     | (int) number of repetition for average result | `1` |
 | --fold          | (int) k-fold validation | `4` |
 
 
