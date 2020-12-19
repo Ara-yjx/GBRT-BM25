@@ -128,7 +128,7 @@ if __name__ == "__main__":
     parser.add_argument('--fold', type=int, help='k-fold validation')
     args = parser.parse_args()
     datasetFile = 'dataset.pickle' if args.dataset is None else args.dataset
-    ITERATION = 3 if args.iteration is None else args.iteration
+    ITERATION = 1 if args.iteration is None else args.iteration
     FOLD = 4 if args.fold is None else args.fold
 
     with open(datasetFile, 'rb') as f:
@@ -181,7 +181,7 @@ if __name__ == "__main__":
                 'eval_metric': 'NDCG:top=10',
                 # 'custom_metric': ['NDCG:top=10;hints=skip_train~false','MAP:top=10;hints=skip_train~false'],
                 # 'custom_metric': ['NDCG:top=10;hints=skip_train~false'],
-                'metric_period': 5,
+                'metric_period': 10,
                 'iterations': 1000,
                 'depth': 4,
                 'learning_rate': 0.01,
