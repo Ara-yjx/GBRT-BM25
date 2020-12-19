@@ -5,7 +5,7 @@ Also available with Python 3.8.6 (as on csil).
 
 
 Install dependencies  
-`$ pip install catboost==0.24.3 krovetz=1.0.2`
+`$ pip install catboost==0.24.3 krovetz==1.0.2`
 
 Copy necessary data file into project directory
 1.  TREC disk4-5 (must be in valid xml format)  
